@@ -12,6 +12,9 @@ I'm Sophie! Some obligatory facts: I'm a senior, and I'm in a student production
 
 Hello! My name is Maynard Larweh, and I am a senior at MIT majoring in Computer Science (Course 6-3) with a minor in Music Technology. Aside from being on the procrastination grind, I'm a member of Cru, one of the Christian groups at MIT. I also music direct for the MIT Video Game Orchestra and dance with Sakata Afrique.
 
+## Hailey
+Hi! I'm Hailey, a senior at MIT studying Computer Science (6-3). Some pertinent information about me: I love reading, writing, and photography, and I recently got back into running and completed the Cambridge Half Marathon! I also enjoy building consumer apps, which I've had the chance to do through AppDev@MIT.
+
 ### Q and A
 
 Hey Ellie, this is Sophie. I'd love to know when VGO's next show is!\
