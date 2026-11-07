@@ -21,3 +21,5 @@ Hey Ellie, this is Sophie. I'd love to know when VGO's next show is!\
 &emsp;(psst. Maynard here. I can also answer this: our semesterly concert is on December 12th at 7 PM in Kresge Auditorium! Look out for more info soon 👁️)
 
 Ellie–Maynard here–how do you have time for quite literally everything?
+
+Maynard-Hailey here-what pieces have you directed in VGO? :0
