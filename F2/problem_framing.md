@@ -41,3 +41,10 @@ _An outline of a solution._
 ## Ethical analysis
 
 _An identification of stakeholders and the impacts they might experience in the short and long term._
+
+The stakeholders of our project include:
+1. Anyone who wants to build playlists with friends or family who use different streaming platforms. In the short term, these people can share music with each other without anyone having to switch platforms. However, they may experience issues with mismatched songs across platforms. For example, an official song from Spotify might be matched to a cover or unofficial upload in YouTube, so the playlist doesn’t sound the same for everyone. Users are also required to share their Spotify or YouTube listening data with our app. In the long term, this data accumulates, which could lead to privacy issues if our app is not secure. Another long term issue is platform dependency -- given that our app relies on the Spotify and YouTube APIs, if one of those APIs were to be restricted, users could potentially lose their playlists if they don’t export them.
+
+2. Artists whose music is available on any of the streaming platforms we are integrating. In the short term, their music being shared cross-platform means more listeners. However, going back to the issue of mismatched songs, an artist loses a stream whenever an official release from Spotify matches with an unofficial release from YouTube, for example. In the long term, if this happens consistently, artists could lose the proper credit or monetization for their music.
+
+3. Streaming platforms that we are integrating. In the short term, a playlist that would have kept a whole friend group on one platform now has its streams split across competitors. In the long term, users of our app are less incentivized to switch to or stay on a platform just because their friends use it, because they can use Transpose to convert shared music to the platform they’re already comfortable with.
