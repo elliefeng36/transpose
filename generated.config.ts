@@ -4,5 +4,5 @@ export default {
   assemble: buildApplication,
   title: "Transpose",
   wireName: "TransposeWire",
-  design: { version: 1, documents: [] },
+  design: { version: 1, documents: [new URL("./design/types.md", import.meta.url)] },
 };
