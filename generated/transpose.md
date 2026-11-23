@@ -8,6 +8,33 @@ _specifications and composition source, then regenerate this file._
 
 ## Concepts
 
+### Playlisting
+
+Defined in [Playlisting](../design/concepts/Playlisting.md), line 1.
+
+#### Actions
+
+- `create(title: String, owner: User) : returns (playlist: Playlist)`
+  - Refuses `PLAYLIST_EXISTS`: Playlist already exists.
+- `addSong(playlist: Playlist, song: Song, user: User) : returns (song: Song)`
+  - Refuses `PLAYLIST_NOT_FOUND`: Playlist not found.
+  - Refuses `SONG_IN_PLAYLIST`: Song already exists in the playlist.
+- `removeSong(playlist: Playlist, song: Song) : returns (song: Song)`
+  - Refuses `PLAYLIST_NOT_FOUND`: Playlist not found.
+  - Refuses `SONG_NOT_IN_PLAYLIST`: Song does not exist in the playlist.
+
+#### Queries
+
+- `_getPlaylist(title: String) : one (playlist: Playlist)`
+- `_getSongs(playlist: Playlist) : many (song: Song)`
+- `_getSongsAddedByUser(user: User, playlist: Playlist) : many (song: Song)`
+
+#### Instances
+
+- `Playlisting` — instance of `Playlisting` — [Transpose application types](../design/types.md), line 11.
+  - `Song` is `SongRegistering.Song` — [Transpose application types](../design/types.md), line 13.
+  - `User` is `User` — [Transpose application types](../design/types.md), line 12.
+
 ### SongRegistering
 
 Defined in [SongRegistering](../design/concepts/SongRegistering.md), line 1.
@@ -29,7 +56,13 @@ Defined in [SongRegistering](../design/concepts/SongRegistering.md), line 1.
 
 #### Instances
 
-- `SongRegistering` — instance of `SongRegistering` — [Transpose application types](../design/types.md), line 4.
+- `SongRegistering` — instance of `SongRegistering` — [Transpose application types](../design/types.md), line 9.
+
+## Application types
+
+Concrete types:
+
+- `User` — [Transpose application types](../design/types.md), line 4.
 
 ## Reactions
 

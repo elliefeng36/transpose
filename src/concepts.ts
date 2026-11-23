@@ -1,6 +1,14 @@
 import { conceptSet, registerConcept } from "@mit-sdg/sync-engine/assembly";
 import songRegisteringSpec from "@design/concepts/SongRegistering.md" with { type: "text" };
+import playlistingSpec from "@design/concepts/Playlisting.md" with { type: "text" };
 import { BadLink, SongRegisteringConcept } from "./concepts/SongRegistering.ts";
+import {
+  PlaylistingConcept,
+  PlaylistExists,
+  PlaylistNotFound,
+  SongInPlaylist,
+  SongNotInPlaylist,
+} from "./concepts/Playlisting.ts";
 
 const songRegistering = registerConcept({
   class: SongRegisteringConcept,
@@ -8,8 +16,20 @@ const songRegistering = registerConcept({
   refusals: { BAD_LINK: BadLink },
 });
 
+const playlisting = registerConcept({
+  class: PlaylistingConcept,
+  spec: playlistingSpec,
+  refusals: {
+    PLAYLIST_EXISTS: PlaylistExists,
+    PLAYLIST_NOT_FOUND: PlaylistNotFound,
+    SONG_IN_PLAYLIST: SongInPlaylist,
+    SONG_NOT_IN_PLAYLIST: SongNotInPlaylist,
+  },
+});
+
 export const applicationConceptSet = conceptSet({
   SongRegistering: songRegistering,
+  Playlisting: playlisting
 });
 
 export const { concepts } = applicationConceptSet;

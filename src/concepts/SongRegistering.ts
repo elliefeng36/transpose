@@ -3,7 +3,7 @@ import { originalLink, parseSongLink, type Platform } from "../link-parsing-util
 
 export class BadLink extends Error {}
 
-type Song = {
+export type Song = {
   _id: string;
   platform: Platform;
   title: string;
