@@ -70,6 +70,7 @@ async function searchSpotify(
 }
 
 async function callYoutube(path: string) {
+  if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY is required.");
   const url = new URL(`https://www.googleapis.com/youtube/v3${path}`);
   url.searchParams.set("key", YOUTUBE_API_KEY);
   const response = await fetch(url);

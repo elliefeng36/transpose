@@ -1,6 +1,8 @@
 import { assemble, type LogSink } from "@mit-sdg/sync-engine/assembly";
 import type { Db } from "mongodb";
 import { composition as transposing } from "./compositions/Transposing.ts";
+import { composition as sharingPlaylists } from "./compositions/SharingPlaylists.ts";
+import { PlaylistSharingConcept } from "./concepts/PlaylistSharing.ts";
 import { MatchingConcept } from "./concepts/Matching.ts";
 import { SongRegisteringConcept } from "./concepts/SongRegistering.ts";
 import { PlaylistingConcept } from "./concepts/Playlisting.ts";
@@ -26,12 +28,12 @@ export function buildApplicationOn(
   return assemble({
     conceptSet: applicationConceptSet,
     instances: {
-      SongRegistering: new SongRegisteringConcept(db, lookupSong, matchSong),
-      Playlisting: new PlaylistingConcept(db),
       SongRegistering: new SongRegisteringConcept(database, lookupSong, noMatch),
+      Playlisting: new PlaylistingConcept(database),
       Matching: new MatchingConcept(database, searchSong),
+      PlaylistSharing: new PlaylistSharingConcept(database),
     },
-    composition: { Transposing: transposing, ...composition },
+    composition: { Transposing: transposing, SharingPlaylists: sharingPlaylists, ...composition },
     // without this a failure only shows up as INTERNAL_ERROR
     rawFaultReporter: ({ error }) => console.error(error),
     ...options,

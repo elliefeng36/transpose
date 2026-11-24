@@ -118,6 +118,11 @@ export class SongRegisteringConcept {
     return { song };
   }
 
+  async _record({ id }: { id: string }) {
+    const song = await this.songs.findOne({ _id: id });
+    return song ? [{ song }] : [];
+  }
+
   async _details({ song: id }: { song: string }) {
     const song = await this.songs.findOne({ _id: id });
     if (song === null) return [];

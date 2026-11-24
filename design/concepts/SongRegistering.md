@@ -83,6 +83,9 @@ unregister (song: Song) : returns (song: Song)
 ## Queries
 
 ```queries
+_record (id: String) : optional (song: Song)
+  The stored song record for use by playlist actions.
+
 _details (song: Song) : optional (platform: Platform, title: String, artist: String, isrc?: String)
   No row when song is unknown. isrc is absent when no platform reported one.
 _links (song: Song) : many (platform: Platform, songId: String, url: String)

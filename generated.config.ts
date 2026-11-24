@@ -7,5 +7,6 @@ export default {
   design: { version: 1, documents: [
     new URL("./design/types.md", import.meta.url),
     new URL("./design/compositions/Transposing.md", import.meta.url),
+    new URL("./design/compositions/SharingPlaylists.md", import.meta.url),
   ] },
 };

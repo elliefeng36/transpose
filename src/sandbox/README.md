@@ -8,6 +8,12 @@ bun run sandbox
 
 Then open http://127.0.0.1:3001 (set `SANDBOX_PORT` for another port). Stop it with Ctrl+C.
 
+Sign in or create an account to open the sandbox. Song registration, matching, playlists, and reset all require an active session.
+
+From a playlist you can view, select **Spotify** or **YouTube** and click **Prepare Soundiiz export**. Open the temporary link to review matches and authorize the transfer in Soundiiz. Transpose sends the playlist title and the songs' titles, artists, and ISRCs when available. The export captures the current playlist and later changes require a new export. Soundiiz accepts 1–200 tracks per import link.
+
+In **Playlist sharing**, create two accounts using separate browser profiles or a regular and private window. Sign in as the owner, create a playlist, and invite the other account by username. In the second window, reload and accept the invitation. The new member can add a registered song immediately. The owner can grant removal permission or revoke access. Sharing itself uses no platform API. Accounts and playlists are temporary and are cleared when the sandbox stops.
+
 It runs the application from `src/build.ts` with the real Spotify and YouTube APIs, using the keys in `.env`. The database is an in-memory MongoDB that's thrown away when the server stops, so the sandbox never touches the team's database and doesn't need Docker. The endpoints in `server.ts` belong to the sandbox only, since the app doesn't have its endpoints yet.
 
 ## What the page shows

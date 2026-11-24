@@ -75,6 +75,12 @@ _getPlaylist(title: String): one (playlist : Playlist)
 
 _getSongs(playlist: Playlist) : many (song : Song)
 
+_getStoredSong (playlist: Playlist, id: String) : optional (song: Song)
+    The stored song with this ID in the playlist.
+
+_isOwner (playlist: Playlist, user: User) : one (allowed: Flag)
+    That user created the playlist, including when sharing has stopped.
+
 _getSongsAddedByUser(user: User, playlist: Playlist) : many (song: Song)
     The set of songs in the playlist added by this user. No rows when there are none.
 ```
