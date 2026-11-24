@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transpose embed test</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #fff; --text: #1d1d1f; --muted: #6b6b70;
+    --border: #e2e2e0; --accent: #3b5bdb; --ok: #2b8a3e; --warn: #c26a00; --bad: #c92a2a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --card: #1d1d20; --text: #ececee; --muted: #9a9aa2;
+      --border: #2e2e33; --accent: #7c95ff; --ok: #69db7c; --warn: #ffb347; --bad: #ff8787;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  h3 { font-size: 15px; margin: 16px 0 6px; }
+  p.lede { color: var(--muted); margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  input[type=text] { flex: 1 1 220px; min-width: 0; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
+  button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .samples button { font-size: 13px; padding: 4px 8px; }
+  label.inline { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .player-wrap { aspect-ratio: 16 / 9; width: 100%; background: #000; border-radius: 8px; overflow: hidden; }
+  .player-wrap iframe, .player-wrap > div { width: 100%; height: 100%; }
+  #spotify-embed { min-height: 352px; }
+  .status { font-size: 13px; margin: 10px 0 4px; padding: 8px 10px; border-radius: 8px; background: var(--bg); }
+  .status b { font-weight: 600; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  pre.log { font: 12px/1.4 ui-monospace, Menlo, monospace; background: var(--bg); border-radius: 8px;
+    padding: 8px; height: 140px; overflow: auto; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; }
+  .env { font-size: 13px; color: var(--muted); }
+  .checklist ul { padding-left: 0; list-style: none; margin: 0; }
+  .checklist li { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; }
+  .checklist li input { margin-top: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--bg); }
+  td[contenteditable] { min-width: 80px; }
+  .tablewrap { overflow-x: auto; }
+  .notes li { margin-bottom: 6px; }
+  code { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Transpose embed test</h1>
+  <p class="lede">Does in-app playback keep each platform's Premium perks? Spotify should play full tracks when you're logged in, and YouTube Premium should play with no ads.</p>
+  <p class="env" id="env"></p>
+
+  <div class="grid">
+    <!-- SPOTIFY -->
+    <section class="card">
+      <h2>Spotify (iFrame API)</h2>
+      <div class="row">
+        <input type="text" id="sp-url" placeholder="Paste a Spotify track / album / playlist link">
+        <button class="primary" id="sp-load">Load</button>
+      </div>
+      <div class="row samples">
+        <button data-sp="https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8">Sample track</button>
+        <button data-sp="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M">Sample playlist</button>
+        <button id="sp-toggle">Play / pause</button>
+      </div>
+      <div id="spotify-embed"></div>
+      <div class="status" id="sp-status">Waiting for the Spotify iFrame API…</div>
+      <pre class="log" id="sp-log"></pre>
+    </section>
+
+    <!-- YOUTUBE -->
+    <section class="card">
+      <h2>YouTube (IFrame Player API)</h2>
+      <div class="row">
+        <input type="text" id="yt-url" placeholder="Paste a YouTube / YouTube Music link">
+        <button class="primary" id="yt-load">Load</button>
+      </div>
+      <div class="row samples">
+        <button data-yt="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Sample music video</button>
+        <button data-yt="https://music.youtube.com/watch?v=kJQP7kiw5Fk">Sample YT Music link</button>
+        <label class="inline"><input type="checkbox" id="yt-nocookie"> use youtube-nocookie.com</label>
+      </div>
+      <div class="player-wrap"><div id="yt-player"></div></div>
+      <div class="status" id="yt-status">Waiting for the YouTube IFrame API…</div>
+      <pre class="log" id="yt-log"></pre>
+    </section>
+  </div>
+
+  <section class="card checklist" style="margin-top:16px">
+    <h2>Manual check, per browser</h2>
+    <p class="env">I can't sign in to your accounts, so these need a human. Run through them once in each browser you care about (Chrome, Safari, Firefox, Brave, plus a phone if you can). Checkboxes and table cells are just scratch space; nothing is saved.</p>
+
+    <h3>Setup</h3>
+    <ul>
+      <li><input type="checkbox"><span>Open this page from <code>http://localhost:8000</code>, not by double-clicking the file. YouTube refuses to play embeds with no referrer (error 153), which is what <code>file://</code> sends.</span></li>
+      <li><input type="checkbox"><span>In a separate tab of the <b>same browser profile</b>, sign in at open.spotify.com and youtube.com. Then reload this page.</span></li>
+    </ul>
+
+    <h3>Spotify</h3>
+    <ul>
+      <li><input type="checkbox"><span>Logged <b>out</b> (or a private window): load the sample track and press play. Expect a "Preview" label and the status line to report about 30 s. This is the baseline.</span></li>
+      <li><input type="checkbox"><span>Logged in to Spotify <b>Premium</b>: the status should report the full song length (around 3:33 for the sample). No ads.</span></li>
+      <li><input type="checkbox"><span>If you can borrow a <b>Free</b> account: note whether you get full tracks, previews, or ads.</span></li>
+      <li><input type="checkbox"><span>Playlist: does it advance to the next track by itself?</span></li>
+    </ul>
+
+    <h3>YouTube</h3>
+    <ul>
+      <li><input type="checkbox"><span>Signed <b>out</b> (private window): play the sample video a few times. You should eventually see a pre-roll ad. This proves ads can show here at all.</span></li>
+      <li><input type="checkbox"><span>Signed in with YouTube <b>Premium</b>: replay several times and try a few other music videos. Expect no ads. Clicking the YouTube logo in the player should show you signed in.</span></li>
+      <li><input type="checkbox"><span>Tick <b>use youtube-nocookie.com</b> and repeat. Note whether Premium is still recognized.</span></li>
+      <li><input type="checkbox"><span>If anyone on the team has <b>YouTube Music Premium only</b> (not full YouTube Premium): does the embed show ads? I expect it does, because that plan only removes ads inside the YouTube Music app.</span></li>
+      <li><input type="checkbox"><span>Paste a few real music videos (label/VEVO uploads and "Topic" auto-generated tracks) and note any that fail with error 101 or 150, meaning embedding is disabled by the owner.</span></li>
+    </ul>
+
+    <h3>Results</h3>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Browser</th><th>Spotify logged out</th><th>Spotify Premium</th><th>YT signed out</th><th>YT Premium</th><th>YT Premium + nocookie</th></tr></thead>
+      <tbody>
+        <tr><td>Chrome</td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td></tr>
+        <tr><td>Safari</td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td></tr>
+        <tr><td>Firefox</td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td></tr>
+        <tr><td>Brave / other</td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>What to expect (and why)</h3>
+    <ul class="notes" style="padding-left:18px">
+      <li><b>Both embeds only know who you are through cookies</b> on spotify.com / youtube.com. Inside our page those count as <i>third-party</i> cookies. Chrome still allows them by default. Safari (Intelligent Tracking Prevention), Brave, and Firefox strict mode block them, so the embed acts logged out: Spotify falls back to 30 s previews and YouTube can show ads even to Premium users.</li>
+      <li><b>Spotify:</b> the embed plays full tracks only when the listener is logged in to Spotify in that browser. Otherwise it plays 30 s previews. In-app webviews (Electron, Android WebView) are commonly stuck in preview mode.</li>
+      <li><b>YouTube:</b> Premium's ad-free playback applies to embedded players when the viewer is signed in to their Premium account in that browser. Videos whose owner disabled embedding fail with error 101/150, which matters for some label music videos.</li>
+      <li><b>Neither API tells our code whether an ad is playing or which plan the user has.</b> The best signal we have is Spotify's reported duration (~30 s means preview).</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (id) => document.getElementById(id);
+function logTo(el, msg) {
+  const t = new Date().toLocaleTimeString();
+  el.textContent += `[${t}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+const fmt = (ms) => {
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+/* environment hints */
+(function env() {
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox"
+    : /Chrome\//.test(ua) ? (navigator.brave ? "Brave" : "Chrome")
+    : /Safari\//.test(ua) ? "Safari" : "Unknown";
+  let msg = `Browser: ${browser} · origin: ${location.origin}`;
+  if (location.protocol === "file:") {
+    msg += " ⚠ Opened from file:// — YouTube will refuse to play. Serve it on localhost (see README).";
+  }
+  $("env").textContent = msg;
+})();
+
+/* ---------- Spotify ---------- */
+const spLog = $("sp-log");
+let spController = null;
+let spCurrentUri = null;
+let spMaxDuration = 0;
+
+function spotifyUriFromInput(raw) {
+  raw = raw.trim();
+  if (/^spotify:(track|album|playlist|episode|show|artist):[A-Za-z0-9]+$/.test(raw)) return raw;
+  try {
+    const u = new URL(raw);
+    if (!/spotify\.com$/.test(u.hostname)) return null;
+    // handles /track/ID and /intl-xx/track/ID
+    const m = u.pathname.match(/\/(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]+)/);
+    return m ? `spotify:${m[1]}:${m[2]}` : null;
+  } catch { return null; }
+}
+
+function spStatus(html) { $("sp-status").innerHTML = html; }
+
+window.onSpotifyIframeApiReady = (IFrameAPI) => {
+  logTo(spLog, "iFrame API ready");
+  const startUri = "spotify:track:4PTG3Z6ehGkBFwjybzWkR8";
+  IFrameAPI.createController($("spotify-embed"), { uri: startUri, width: "100%", height: 352 }, (controller) => {
+    spController = controller;
+    spCurrentUri = startUri;
+    spStatus("Loaded. Press play in the player, then watch the reported length here.");
+    controller.addListener("ready", () => logTo(spLog, "player ready"));
+    controller.addListener("playback_update", (e) => {
+      const { isPaused, isBuffering, duration, position } = e.data;
+      if (!duration) return;
+      if (duration > spMaxDuration) spMaxDuration = duration;
+      const preview = duration <= 31000;
+      spStatus(
+        `${isPaused ? "Paused" : isBuffering ? "Buffering" : "Playing"} ${fmt(position)} / ${fmt(duration)} · ` +
+        (preview
+          ? `<b class="warn">Looks like a 30 s preview</b> (not logged in, or cookies blocked)`
+          : `<b class="ok">Full-length playback</b>`)
+      );
+    });
+    let lastLogged = "";
+    controller.addListener("playback_update", (e) => {
+      const key = `${e.data.isPaused}-${e.data.duration}`;
+      if (key !== lastLogged) {
+        lastLogged = key;
+        logTo(spLog, `playback_update paused=${e.data.isPaused} duration=${fmt(e.data.duration || 0)}`);
+      }
+    });
+  });
+};
+
+function spLoad(raw) {
+  const uri = spotifyUriFromInput(raw);
+  if (!uri) { spStatus(`<b class="bad">Couldn't read that as a Spotify link.</b>`); return; }
+  if (!spController) { spStatus("Player isn't ready yet, try again in a second."); return; }
+  spMaxDuration = 0;
+  spCurrentUri = uri;
+  spController.loadUri(uri);
+  spStatus(`Loaded <code>${uri}</code>. Press play.`);
+  logTo(spLog, `loadUri ${uri}`);
+}
+$("sp-load").onclick = () => spLoad($("sp-url").value);
+$("sp-url").addEventListener("keydown", (e) => { if (e.key === "Enter") spLoad($("sp-url").value); });
+document.querySelectorAll("[data-sp]").forEach((b) => b.onclick = () => { $("sp-url").value = b.dataset.sp; spLoad(b.dataset.sp); });
+$("sp-toggle").onclick = () => spController && spController.togglePlay();
+
+/* ---------- YouTube ---------- */
+const ytLog = $("yt-log");
+let ytPlayer = null;
+let ytApiReady = false;
+let ytCurrent = { videoId: "dQw4w9WgXcQ", list: null };
+
+const YT_STATES = { "-1": "unstarted", 0: "ended", 1: "playing", 2: "paused", 3: "buffering", 5: "cued" };
+const YT_ERRORS = {
+  2: "invalid video id",
+  5: "HTML5 player error",
+  100: "video not found / private",
+  101: "owner disabled embedding",
+  150: "owner disabled embedding",
+  153: "missing referrer (are you on file://?)",
+};
+
+function youtubeFromInput(raw) {
+  raw = raw.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return { videoId: raw, list: null };
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.replace(/^www\.|^m\./, "");
+    let videoId = null;
+    if (host === "youtu.be") videoId = u.pathname.slice(1, 12);
+    else if (/youtube(-nocookie)?\.com$/.test(host)) {
+      videoId = u.searchParams.get("v");
+      const m = u.pathname.match(/\/(embed|shorts|live|v)\/([A-Za-z0-9_-]{11})/);
+      if (!videoId && m) videoId = m[2];
+    } else return null;
+    const list = u.searchParams.get("list");
+    if (!videoId && !list) return null;
+    return { videoId, list };
+  } catch { return null; }
+}
+
+function ytStatus(html) { $("yt-status").innerHTML = html; }
+
+function ytCreate() {
+  if (ytPlayer) { ytPlayer.destroy(); ytPlayer = null; }
+  // destroy() removes the node; put a fresh one back
+  const wrap = document.querySelector(".player-wrap");
+  wrap.innerHTML = '<div id="yt-player"></div>';
+  const nocookie = $("yt-nocookie").checked;
+  const opts = {
+    width: "100%", height: "100%",
+    playerVars: { playsinline: 1, rel: 0, origin: location.origin },
+    events: {
+      onReady: () => {
+        logTo(ytLog, `player ready (host: ${nocookie ? "youtube-nocookie.com" : "youtube.com"})`);
+        ytStatus("Ready. Press play and watch for an ad before the video starts.");
+      },
+      onStateChange: (e) => {
+        const s = YT_STATES[e.data] ?? e.data;
+        let extra = "";
+        if (e.data === 1 && ytPlayer.getVideoData) {
+          const d = ytPlayer.getVideoData();
+          extra = ` · "${d.title || "?"}" (${d.video_id || "?"})`;
+        }
+        logTo(ytLog, `state: ${s}${extra}`);
+        if (e.data === 1) ytStatus(`<b class="ok">Playing</b>${extra}. Did an ad play first? Note it in the table.`);
+      },
+      onError: (e) => {
+        const why = YT_ERRORS[e.data] || "unknown";
+        logTo(ytLog, `error ${e.data}: ${why}`);
+        ytStatus(`<b class="bad">Error ${e.data}: ${why}</b>`);
+      },
+    },
+  };
+  if (nocookie) opts.host = "https://www.youtube-nocookie.com";
+  if (ytCurrent.list && !ytCurrent.videoId) {
+    opts.playerVars.listType = "playlist";
+    opts.playerVars.list = ytCurrent.list;
+  } else {
+    opts.videoId = ytCurrent.videoId;
+    if (ytCurrent.list) opts.playerVars.list = ytCurrent.list;
+  }
+  ytPlayer = new YT.Player("yt-player", opts);
+}
+
+window.onYouTubeIframeAPIReady = () => {
+  ytApiReady = true;
+  logTo(ytLog, "IFrame API ready");
+  ytCreate();
+};
+
+function ytLoad(raw) {
+  const parsed = youtubeFromInput(raw);
+  if (!parsed) { ytStatus(`<b class="bad">Couldn't read that as a YouTube link.</b>`); return; }
+  ytCurrent = parsed;
+  logTo(ytLog, `load ${JSON.stringify(parsed)}`);
+  if (ytApiReady) ytCreate();
+}
+$("yt-load").onclick = () => ytLoad($("yt-url").value);
+$("yt-url").addEventListener("keydown", (e) => { if (e.key === "Enter") ytLoad($("yt-url").value); });
+document.querySelectorAll("[data-yt]").forEach((b) => b.onclick = () => { $("yt-url").value = b.dataset.yt; ytLoad(b.dataset.yt); });
+$("yt-nocookie").onchange = () => { if (ytApiReady) { logTo(ytLog, "switching host, recreating player"); ytCreate(); } };
+</script>
+<script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+<script src="https://www.youtube.com/iframe_api" async></script>
+</body>
+</html>

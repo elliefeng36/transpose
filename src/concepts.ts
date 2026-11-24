@@ -9,6 +9,8 @@ import {
   SongInPlaylist,
   SongNotInPlaylist,
 } from "./concepts/Playlisting.ts";
+import matchingSpec from "@design/concepts/Matching.md" with { type: "text" };
+import { MatchingConcept } from "./concepts/Matching.ts";
 
 const songRegistering = registerConcept({
   class: SongRegisteringConcept,
@@ -26,10 +28,15 @@ const playlisting = registerConcept({
     SONG_NOT_IN_PLAYLIST: SongNotInPlaylist,
   },
 });
+const matching = registerConcept({
+  class: MatchingConcept,
+  spec: matchingSpec,
+});
 
 export const applicationConceptSet = conceptSet({
   SongRegistering: songRegistering,
-  Playlisting: playlisting
+  Playlisting: playlisting,
+  Matching: matching,
 });
 
 export const { concepts } = applicationConceptSet;

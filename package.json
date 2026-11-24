@@ -22,6 +22,7 @@
     "test:memory": "TEST_MONGO=memory bun test",
     "start": "bun src/main.ts",
     "dev": "bun run db:up && bun --watch src/main.ts",
+    "sandbox": "bun src/sandbox/server.ts",
     "db:up": "docker compose up -d --wait mongo",
     "db:shell": "docker compose exec mongo mongosh -u dev -p dev",
     "db:logs": "docker compose logs mongo",
