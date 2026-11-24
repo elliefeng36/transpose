@@ -4,6 +4,8 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { afterAll, beforeAll, beforeEach, describe, it } from "bun:test";
 import { composition } from "../compositions/Transposing.ts";
 import { MatchingConcept, RateLimited } from "../concepts/Matching.ts";
+import { PlaylistingConcept } from "../concepts/Playlisting.ts";
+import { PlaylistSharingConcept } from "../concepts/PlaylistSharing.ts";
 import { SongRegisteringConcept } from "../concepts/SongRegistering.ts";
 import { applicationConceptSet, concepts } from "../concepts.ts";
 import type { Platform } from "../link-parsing-utils.ts";
@@ -59,6 +61,8 @@ function build() {
   return assemble({
     conceptSet: applicationConceptSet,
     instances: {
+      Playlisting: new PlaylistingConcept(testDb.db),
+      PlaylistSharing: new PlaylistSharingConcept(testDb.db),
       SongRegistering: new SongRegisteringConcept(
         testDb.db,
         async (platform, songId) => details.get(`${platform}:${songId}`) ?? null,

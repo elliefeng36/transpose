@@ -21,11 +21,13 @@
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+  .sign-in-screen { max-width: 420px; padding-top: clamp(32px, 12vh, 120px); }
+  #playlist-account { display: grid; gap: 12px; }
+  #playlist-account label { display: grid; gap: 4px; }
   header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
   h1 { font-size: 24px; margin: 0 0 4px; }
   h2 { font-size: 17px; margin: 0 0 10px; }
   p.lede { color: var(--muted); margin: 0 0 8px; max-width: 70ch; }
-  .env { font-size: 13px; margin: 0 0 20px; }
   .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -33,7 +35,7 @@
   .wide { margin-top: 16px; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
   .row:last-child { margin-bottom: 0; }
-  input[type=text], select { flex: 1 1 160px; min-width: 0; padding: 8px 10px; border-radius: 8px;
+  input[type=text], input[type=password], select { flex: 1 1 160px; min-width: 0; padding: 8px 10px; border-radius: 8px;
     border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
   select { flex: 0 0 auto; }
   button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
@@ -83,23 +85,41 @@
   .field { margin-left: 8px; }
   .key { color: var(--muted); }
   .flash { animation: flash 2s ease-out; }
+  #playlist-sharing form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  #playlist-sharing [hidden] { display: none; }
+  #playlist-sharing article { border-top: 1px solid var(--border); margin-top: 14px; }
+  #playlist-sharing li { padding: 4px 0; }
   @keyframes flash { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
 </style>
 </head>
 <body>
-<main>
+<main id="sign-in-screen" class="sign-in-screen">
+  <section class="card" aria-labelledby="sign-in-heading">
+    <h1 id="sign-in-heading">Sign in to Transpose</h1>
+    <form id="playlist-account" method="post">
+      <label>Username <input type="text" name="username" autocomplete="username" required maxlength="32"></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required minlength="8" maxlength="128"></label>
+      <button class="primary" value="sign-in">Sign in</button>
+      <button value="register">Create account</button>
+    </form>
+    <p id="account-result" role="status" aria-live="polite" hidden></p>
+  </section>
+</main>
+<main id="workspace" hidden>
   <header>
     <div>
       <h1>Transpose sandbox</h1>
-      <p class="lede">The real SongRegistering, Matching, and Transposing reactions, with the real Spotify and
-        YouTube APIs. The database is thrown away when the server stops.</p>
+      <p class="lede">Register songs and build playlists with friends.</p>
     </div>
     <div class="row">
       <button id="refresh" type="button">Refresh</button>
       <button id="reset" type="button">Start over</button>
+    <div id="playlist-session" class="row">
+      <span id="playlist-user"></span>
+      <button id="playlist-sign-out" type="button">Sign out</button>
+    </div>
     </div>
   </header>
-  <p id="env" class="env faint">Loading…</p>
 
   <div class="grid">
     <div class="col">
@@ -114,20 +134,8 @@
       </section>
 
       <section class="card">
-        <h2>Two links in one request</h2>
-        <p class="hint">Each song should end up with its own link from the other platform.</p>
-        <form id="two-form">
-          <div class="row"><input id="first" type="text" aria-label="First link" placeholder="First link" autocomplete="off"></div>
-          <div class="row"><input id="second" type="text" aria-label="Second link" placeholder="Second link" autocomplete="off"></div>
-          <div class="row"><button>Register both</button></div>
-        </form>
-        <p id="two-result" class="status" hidden></p>
-      </section>
-
-      <section class="card">
-        <h2>Matching.find</h2>
-        <p class="hint">Searches the platform, unless Matching already remembers an answer for this title and artist.
-          Each YouTube search uses one of about 100 a day.</p>
+        <h2>Find a song</h2>
+        <p class="hint">Search Spotify or YouTube by title and artist.</p>
         <form id="find-form">
           <div class="row">
             <select id="find-platform" aria-label="Platform to search">
@@ -146,6 +154,17 @@
     </div>
 
     <div class="col">
+      <section id="playlist-sharing" class="card" aria-labelledby="playlist-heading">
+        <h2 id="playlist-heading">Playlist sharing</h2>
+        <form id="playlist-create" data-playlist-action="/playlists/create" hidden>
+          <label for="playlist-title">Playlist title</label>
+          <input id="playlist-title" type="text" name="title" required maxlength="200">
+          <button class="primary">Create playlist</button>
+        </form>
+        <p id="playlist-result" role="status" aria-live="polite" hidden></p>
+        <div id="playlist-invites"></div>
+        <div id="playlist-list"></div>
+      </section>
       <section class="card">
         <h2>Songs <span id="song-count" class="faint"></span></h2>
         <p id="songs-result" class="status" hidden></p>
@@ -153,27 +172,16 @@
       </section>
 
       <section class="card">
-        <h2>Matching</h2>
+        <h2>Song matches</h2>
         <p class="hint">Wrong tells Matching the answer is the wrong song. It moves on to the next result its
           search found, without searching again, and never gives the rejected one for that title and artist again.</p>
         <p id="matching-result" class="status" hidden></p>
-        <div id="pauses"></div>
         <div id="matches"></div>
       </section>
     </div>
   </div>
 
-  <section class="card wide">
-    <h2>Activity</h2>
-    <p class="hint">Each request and every action it ran, newest first. ↳ marks an action a Transposing reaction asked for.</p>
-    <div id="flows" class="scroll"></div>
-  </section>
 
-  <section class="card wide">
-    <h2>Platform API calls</h2>
-    <p class="hint">oEmbed is free. videos.list costs 1 of YouTube's 10,000 daily units. Each YouTube search uses one of about 100 a day.</p>
-    <div id="calls" class="scroll"></div>
-  </section>
 </main>
 
 <script>
@@ -184,17 +192,14 @@ const SAMPLES = [
   ["Roar · official video", "https://www.youtube.com/watch?v=CevxZvSJLk8"],
 ];
 const PLATFORM = { SPOTIFY: "Spotify", YOUTUBE: "YouTube" };
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 let state = { songs: [], matches: [], pauses: [], flows: [], calls: [], youtubeSearches: 0, keys: { spotify: true, youtube: true } };
 let flashSong = null;
-let flashFlow = null;
 let busy = false;
 
 const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const short = (id) => String(id).slice(0, 8);
-const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const linkFor = (platform, id) => (platform === "SPOTIFY" ? `https://open.spotify.com/track/${id}` : `https://www.youtube.com/watch?v=${id}`);
 const songById = (id) => state.songs.find((s) => s._id === id);
@@ -206,9 +211,16 @@ const otherPlatform = (platform) => (platform === "SPOTIFY" ? "YOUTUBE" : "SPOTI
 async function refresh() {
   try {
     const response = await fetch("/sandbox/state", { cache: "no-store" });
+    if (response.status === 401) {
+      showPlaylistSession(null);
+      return;
+    }
+    if (!response.ok) throw new Error();
     state = await response.json();
+    showPlaylistSession(state.user);
   } catch {
-    $("#env").innerHTML = `<span class="bad">Can't reach the sandbox server. Start it with <code>bun run sandbox</code>.</span>`;
+    showPlaylistSession(null);
+    show($("#account-result"), "Could not reach the sandbox server.", "bad");
     return;
   }
   render();
@@ -217,7 +229,6 @@ async function refresh() {
 // POSTs to one of the sandbox's endpoints, then reloads everything
 async function post(path, body) {
   const id = newId();
-  const started = performance.now();
   let response;
   let value = {};
   try {
@@ -230,23 +241,18 @@ async function post(path, body) {
   } catch {
     return { ok: false, message: "Couldn't reach the sandbox server. Is it still running?" };
   }
-  const ms = Math.round(performance.now() - started);
   await refresh();
   const flow = state.flows.find((f) => f.steps.some((s) => s.action === "RequestBoundary.request" && s.input.correlationId === id));
-  if (flow) flashFlow = flow.id;
-  if (response.ok) return { ok: true, value, ms };
+  if (response.ok) return { ok: true, value };
   return { ok: false, message: explain(value.error, flow) };
 }
 
 // an error response only says INVALID_REQUEST or INTERNAL_ERROR, so the reason comes from the log
 function explain(code, flow) {
   const refused = flow?.steps.find((s) => s.status === "refused");
-  if (refused) return `${refused.action} refused (${refused.error?.error}): ${refused.error?.detail ?? "no reason given"}`;
+  if (refused) return `${refused.error?.detail ?? "Could not complete that action."}`;
   const faulted = flow?.steps.find((s) => s.status === "faulted");
-  if (faulted) {
-    const spotify = state.keys.spotify ? "" : " Spotify's keys aren't set in .env, so every Spotify call fails.";
-    return `${faulted.action} failed. The terminal running the sandbox has the error.${spotify}`;
-  }
+  if (faulted) return "Could not complete that action. Try again later.";
   if (code === "INVALID_REQUEST") return "The request was missing something.";
   return code ?? "Something went wrong.";
 }
@@ -274,28 +280,148 @@ async function run(resultElement, action) {
 // ---- rendering ----
 
 function render() {
-  renderEnv();
+  if (!playlistUser) return;
   renderSongs();
   renderMatching();
-  renderFlows();
-  renderCalls();
+  void renderPlaylists();
   flashSong = null;
-  flashFlow = null;
 }
 
-function renderEnv() {
-  const { keys, youtubeSearches } = state;
-  $("#env").className = "env";
-  $("#env").innerHTML = [
-    keys.spotify
-      ? `<span class="ok">Spotify keys set</span>`
-      : `<span class="bad">Spotify keys aren't set in .env, so Spotify links and Spotify searches fail</span>`,
-    keys.youtube
-      ? `<span class="ok">YouTube key set</span>`
-      : `<span class="bad">YouTube key isn't set in .env, so YouTube searches fail (YouTube links still work)</span>`,
-    `<span>YouTube searches used since the sandbox started: <b>${youtubeSearches}</b></span>`,
-  ].join(`<span class="faint"> · </span>`);
+let playlistRender = 0;
+let playlistUser = null;
+
+function showPlaylistSession(user) {
+  if (!user) {
+    ++playlistRender;
+    $("#playlist-invites").replaceChildren();
+    $("#playlist-list").replaceChildren();
+  }
+  playlistUser = user;
+  $("#playlist-user").textContent = user ? `Signed in as ${user}` : "";
+  $("#sign-in-screen").hidden = Boolean(user);
+  $("#workspace").hidden = !user;
+  $("#playlist-create").hidden = !user;
 }
+
+async function renderPlaylists() {
+  const version = ++playlistRender;
+  const list = $("#playlist-list");
+  const inbox = $("#playlist-invites");
+  try {
+    const response = await fetch("/sandbox/playlists", { cache: "no-store" });
+    if (version !== playlistRender) return;
+    if (response.status === 401) {
+      showPlaylistSession(null);
+      return;
+    }
+    if (!response.ok) throw new Error();
+    const { user, playlists, invites } = await response.json();
+    if (version !== playlistRender) return;
+    if (user !== playlistUser) return;
+
+    const hidden = (name, value) => `<input type="hidden" name="${name}" value="${esc(value)}">`;
+    const form = (action, fields, button) =>
+      `<form data-playlist-action="${action}">${fields}<button>${button}</button></form>`;
+
+    inbox.innerHTML = `<h3>Invitations</h3>${invites.length ? invites.map(({ invite, inviter, title }) =>
+      `<div><strong>${esc(title)}</strong> from ${esc(inviter)}
+        ${form("/invites/accept", hidden("invite", invite), "Accept")}
+        ${form("/invites/decline", hidden("invite", invite), "Decline")}</div>`
+    ).join("") : "<p>No pending invitations.</p>"}`;
+
+    const songOptions = state.songs.map((song) =>
+      `<option value="${esc(song._id)}">${esc(song.title)} · ${esc(song.artist)}</option>`
+    ).join("");
+    list.innerHTML = playlists.map(({ id, title, owner, songs, sharing, canAdd, canRemove, members }) => {
+      const playlist = hidden("playlist", id);
+      const ownerControls = user === owner
+        ? sharing ? form("/playlists/invite", playlist + '<label>Invite username <input type="text" name="invitee" required maxlength="32"></label>', "Send invitation") +
+          members.map(({ member, canAdd, canRemove }) => `<div><strong>${esc(member)}</strong>
+            ${form("/playlists/permissions", playlist + hidden("member", member) +
+              `<label><input type="checkbox" name="canAdd" ${canAdd ? "checked" : ""}> Can add</label>
+               <label><input type="checkbox" name="canRemove" ${canRemove ? "checked" : ""}> Can remove</label>`,
+              "Save permissions")}
+            ${form("/playlists/remove-member", playlist + hidden("member", member), `Remove ${esc(member)}`)}
+          </div>`).join("") + form("/playlists/stop-sharing", playlist, "Stop sharing")
+          : form("/playlists/start-sharing", playlist, "Start sharing")
+        : form("/playlists/leave", playlist, "Leave playlist");
+      const items = songs.map(({ song, addedBy }) => `<li>${esc(song.title)} · ${esc(song.artist)} · added by ${esc(addedBy)}
+        ${canRemove ? form("/playlists/remove-song", playlist + hidden("id", song._id), "Remove song") : ""}</li>`).join("");
+      const addSong = canAdd && songOptions
+        ? form("/playlists/add-song", playlist + `<label>Registered song <select name="id">${songOptions}</select></label>`, "Add song")
+        : canAdd ? "<p>Register a song above to add it here.</p>" : "";
+      const exportForm = songs.length ? form("/playlists/export", playlist +
+        '<label>Export to <select name="destination"><option value="spotify">Spotify</option><option value="youtube">YouTube</option></select></label>',
+        "Prepare Soundiiz export") : "";
+      return `<article><h3>${esc(title)}</h3><p>Owner · ${esc(owner)}</p>
+        ${items ? `<ul>${items}</ul>` : "<p>No songs yet.</p>"}${exportForm}${addSong}${ownerControls}</article>`;
+    }).join("") || "<p>No playlists yet.</p>";
+  } catch {
+    if (version === playlistRender) {
+      inbox.replaceChildren();
+      list.textContent = "Could not load playlists.";
+    }
+  }
+}
+
+$("#playlist-account").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const action = event.submitter?.value === "register" ? "register" : "sign-in";
+  const credentials = Object.fromEntries(new FormData(form));
+  void changeAccount(action, credentials);
+});
+
+$("#playlist-sign-out").addEventListener("click", () => void changeAccount("sign-out"));
+
+async function changeAccount(action, credentials) {
+  const status = action === "sign-out" ? $("#playlist-result") : $("#account-result");
+  await run(status, async () => {
+    try {
+      const response = await fetch(`/auth/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials ?? {}),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        show(status, esc(body.error || "The account request failed."), "bad");
+        return;
+      }
+      $("#playlist-account").reset();
+      status.hidden = true;
+      if (action === "sign-out") showPlaylistSession(null);
+      await refresh();
+    } catch {
+      show(status, "Could not reach the sandbox.", "bad");
+    }
+  });
+}
+
+$("#playlist-sharing").addEventListener("submit", (event) => {
+  const form = event.target;
+  if (!form.dataset.playlistAction) return;
+  event.preventDefault();
+  const user = playlistUser;
+  const body = Object.fromEntries(new FormData(form));
+  for (const input of form.querySelectorAll('input[type="checkbox"]')) {
+    body[input.name] = input.checked;
+  }
+  void run($("#playlist-result"), async () => {
+    const response = await post(form.dataset.playlistAction, body);
+    if (playlistUser !== user) return;
+    if (response.ok && form.dataset.playlistAction === "/playlists/export") {
+      show($("#playlist-result"),
+        `<a href="${esc(response.value.shareUrl)}" target="_blank" rel="noopener noreferrer">Continue in Soundiiz</a>
+         to review the tracks and finish the transfer.`, "ok");
+      $("#playlist-result").scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (response.ok && body.title) form.reset();
+    show($("#playlist-result"), response.ok ? "Playlist updated." : esc(response.message),
+      response.ok ? "ok" : "bad");
+  });
+});
 
 function renderSongs() {
   const key = (s) => `${s.title.trim().toLowerCase()}|${s.artist.trim().toLowerCase()}`;
@@ -335,11 +461,6 @@ function renderSongs() {
 }
 
 function renderMatching() {
-  const now = Date.now();
-  $("#pauses").innerHTML = state.pauses
-    .filter((p) => p.until > now)
-    .map((p) => `<p class="status warn">${PLATFORM[p._id]} is out of quota, so Matching won't search it until ${esc(new Date(p.until).toLocaleString())}.</p>`)
-    .join("");
   if (state.matches.length === 0) {
     $("#matches").innerHTML = `<p class="empty">No searches yet.</p>`;
     return;
@@ -368,118 +489,31 @@ function renderMatching() {
     <tbody>${rows}</tbody></table></div>`;
 }
 
-function renderFlows() {
-  if (state.flows.length === 0) {
-    $("#flows").innerHTML = `<p class="empty">Nothing yet.</p>`;
-    return;
-  }
-  $("#flows").innerHTML = state.flows.map((flow) => {
-    const request = flow.steps.find((s) => s.action === "RequestBoundary.request");
-    const path = request ? request.input.path : "(not from a request)";
-    const input = request ? omit(request.input, ["path", "requestId", "correlationId"]) : {};
-    const steps = flow.steps.filter((s) => s !== request).map(renderStep).join("");
-    const problems = flow.problems.map((p) => `<li class="step bad">${esc(p)}</li>`).join("");
-    return `<div class="flow${flashFlow === flow.id ? " flash" : ""}">
-      <div class="flow-head"><b>${esc(path)}</b>${fields(input)} <span class="faint">${clock(flow.at)}</span></div>
-      <ol class="steps">${steps}${problems}</ol>
-    </div>`;
-  }).join("");
-}
-
-function renderStep(step) {
-  if (step.action === "RequestBoundary.respond" || step.action === "RequestBoundary.respondFramework") {
-    const answer = omit(step.input, ["requestId"]);
-    const shown = answer.error ? ` <span class="bad">${esc(answer.error)}</span>` : fields(answer);
-    return `<li class="step answer">answered${shown}</li>`;
-  }
-  const reaction = reactionName(step.by);
-  let result;
-  if (step.status === "returned") {
-    result = ` → ${fields(step.output)}${takenNote(step)}`;
-  } else if (step.status === "refused") {
-    result = ` → <span class="bad">refused ${esc(step.error?.error ?? "")}</span> <span class="faint">${esc(step.error?.detail ?? "")}</span>`;
-  } else if (step.status === "faulted") {
-    result = ` → <span class="bad">failed</span> <span class="faint">(the terminal has the error)</span>`;
-  } else {
-    result = ` <span class="faint">running…</span>`;
-  }
-  const tag = reaction ? `<span class="by">↳ ${esc(reaction)}</span>` : "";
-  return `<li class="step${reaction ? " nested" : ""}">${tag}<span class="action">${esc(step.action)}</span>${fields(step.input)}${result}</li>`;
-}
-
-// "Transposing.FindSpotifyLink#2" -> "FindSpotifyLink". The sandbox's own endpoints aren't reactions.
-function reactionName(by) {
-  if (!by || by.startsWith("Sandbox.") || by.startsWith("Deliver")) return null;
-  return by.replace(/^Transposing\./, "").replace(/#\d+$/, "");
-}
-
-// addLink answers the song that already has the link, which isn't the song it was asked about
-function takenNote(step) {
-  if (step.action !== "SongRegistering.addLink" || step.output?.song === step.input.song) return "";
-  return ` <span class="warn">the link already belongs to another song, so nothing changed</span>`;
-}
-
-function omit(object, keys) {
-  return Object.fromEntries(Object.entries(object ?? {}).filter(([k]) => !keys.includes(k)));
-}
-
-function fields(object) {
-  return Object.entries(object ?? {})
-    .map(([k, v]) => `<span class="field"><span class="key">${esc(k)}</span> ${fieldValue(v)}</span>`)
-    .join("");
-}
-
-// names songs and matches instead of showing their ids
-function fieldValue(v) {
-  if (typeof v !== "string") return esc(JSON.stringify(v));
-  if (UUID.test(v)) {
-    if (songById(v)) return `<b>${esc(songName(v))}</b>`;
-    const match = state.matches.find((m) => m._id === v);
-    if (match) {
-      if (match.songId) return `<b>${PLATFORM[match.platform]} ${esc(match.songId)}</b>`;
-      return `<b>${match.settled ? "no match" : "search failed"}</b>`;
-    }
-    return esc(`id ${short(v)}`);
-  }
-  return esc(v.replace(/^https?:\/\/(www\.)?/, ""));
-}
-
-function renderCalls() {
-  if (state.calls.length === 0) {
-    $("#calls").innerHTML = `<p class="empty">No calls yet.</p>`;
-    return;
-  }
-  const rows = state.calls.map((c) => {
-    let status = `<span class="faint">…</span>`;
-    if (c.failed) status = `<span class="bad">${esc(c.failed)}</span>`;
-    else if (c.status !== undefined) status = `<span class="${c.status < 400 ? "ok" : "bad"}">${c.status}</span>`;
-    return `<tr><td class="faint">${clock(c.at)}</td><td>${esc(c.api)}</td><td>${esc(c.detail)}</td><td>${status}</td><td class="num">${c.ms ?? ""}</td></tr>`;
-  }).join("");
-  $("#calls").innerHTML = `<div class="tablewrap"><table>
-    <thead><tr><th>Time</th><th>Call</th><th>For</th><th>Status</th><th class="num">ms</th></tr></thead>
-    <tbody>${rows}</tbody></table></div>`;
-}
-
 // "has a Spotify link 003vvx7Niy0yvhvHt4a68B" or "has no Spotify link", for the song's other platform
 function otherLink(song) {
   if (!song) return "is no longer registered";
   const other = otherPlatform(song.platform);
   const found = [song.default, ...song.links].find((l) => l.platform === other);
-  if (!found) return `has no ${PLATFORM[other]} link (Activity shows why)`;
+  if (!found) return `has no ${PLATFORM[other]} link`;
   return `has a ${PLATFORM[other]} link <a href="${esc(found.url)}" target="_blank" rel="noreferrer">${esc(found.songId)}</a>`;
 }
 
 // ---- actions ----
 
+async function registerSong(link, result, fromSearch = false) {
+  const answer = await post("/songs/register", { link });
+  if (!answer.ok) {
+    const prefix = fromSearch ? "Found a match, but couldn’t save it. " : "";
+    return show(result, esc(prefix + answer.message), "bad");
+  }
+  flashSong = answer.value.song;
+  const song = songById(answer.value.song);
+  show(result, `Registered <b>${esc(songName(answer.value.song))}</b>. It ${otherLink(song)}.`, "ok");
+}
+
 function register(link) {
   const result = $("#register-result");
-  run(result, async () => {
-    const answer = await post("/songs/register", { link });
-    if (!answer.ok) return show(result, esc(answer.message), "bad");
-    flashSong = answer.value.song;
-    const song = songById(answer.value.song);
-    show(result, `Registered <b>${esc(songName(answer.value.song))}</b> in ${answer.ms} ms. It ${otherLink(song)}.`, "ok");
-  });
+  run(result, () => registerSong(link, result));
 }
 
 $("#register-form").addEventListener("submit", (event) => {
@@ -496,21 +530,6 @@ $("#samples").addEventListener("click", (event) => {
   register(button.dataset.link);
 });
 
-$("#two-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const first = $("#first").value.trim();
-  const second = $("#second").value.trim();
-  if (!first || !second) return;
-  const result = $("#two-result");
-  run(result, async () => {
-    const answer = await post("/songs/register-two", { first, second });
-    if (!answer.ok) return show(result, esc(answer.message), "bad");
-    const lines = [["First", answer.value.first], ["Second", answer.value.second]].map(([label, id]) =>
-      `${label}: <b>${esc(songName(id))}</b> ${otherLink(songById(id))}`);
-    show(result, lines.join("<br>"), "ok");
-  });
-});
-
 $("#find-form").addEventListener("submit", (event) => {
   event.preventDefault();
   const platform = $("#find-platform").value;
@@ -523,14 +542,13 @@ $("#find-form").addEventListener("submit", (event) => {
     if (!answer.ok) return show(result, esc(answer.message), "bad");
     const match = state.matches.find((m) => m._id === answer.value.match);
     if (match?.songId) {
-      show(result, `Found <a href="${esc(linkFor(match.platform, match.songId))}" target="_blank" rel="noreferrer">${esc(match.songId)}</a>.
-        If it's the wrong song, press Wrong next to it in Matching.`, "ok");
+      await registerSong(linkFor(match.platform, match.songId), result, true);
     } else if (match?.settled && (match.rejected ?? []).length > 0) {
       show(result, "Every result for this title and artist was rejected, so Matching has no answer for it.");
     } else if (match?.settled) {
       show(result, `${PLATFORM[platform]} has no match, and Matching remembers that.`);
     } else {
-      show(result, "The search failed or is paused, so Matching will ask again next time. Platform API calls shows what happened.", "warn");
+      show(result, "The search is temporarily unavailable. Try again later.", "warn");
     }
   });
 });
@@ -586,9 +604,9 @@ $("#matches").addEventListener("click", (event) => {
 $("#refresh").addEventListener("click", () => refresh());
 
 $("#reset").addEventListener("click", async () => {
-  if (!confirm("Clear every song, everything Matching remembers, and the activity log?")) return;
+  if (!confirm("Clear registered songs and matches? Shared playlists keep their saved songs.")) return;
   await fetch("/sandbox/reset", { method: "POST" });
-  for (const id of ["#register-result", "#two-result", "#find-result", "#songs-result", "#matching-result"]) $(id).hidden = true;
+  for (const id of ["#register-result", "#find-result", "#songs-result", "#matching-result", "#playlist-result"]) $(id).hidden = true;
   await refresh();
 });
 

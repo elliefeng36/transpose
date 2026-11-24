@@ -100,6 +100,17 @@ export class PlaylistingConcept {
     return doc.songs.map((s) => ({ song: s.song }));
   }
 
+  async _getStoredSong({ playlist, id }: { playlist: string; id: string }) {
+    const doc = await this.playlists.findOne({ _id: playlist });
+    const entry = doc?.songs.find(({ song }) => song._id === id);
+    return entry ? [{ song: entry.song }] : [];
+  }
+
+  async _isOwner({ playlist, user }: { playlist: string; user: string }) {
+    const doc = await this.playlists.findOne({ _id: playlist, owner: user });
+    return { allowed: doc !== null };
+  }
+
   async _getSongsAddedByUser({
     user,
     playlist,

@@ -11,6 +11,12 @@ import { MongoClient } from "mongodb";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { buildApplicationOn } from "../build.ts";
 import { concepts } from "../concepts.ts";
+import type { Playlist } from "../concepts/Playlisting.ts";
+import { playlistEndpoints } from "./playlist-endpoints.ts";
+import { exportPlaylist } from "./playlist-export.ts";
+import { buildAccounts } from "./accounts.ts";
+import { normalizeUsername, validUsername } from "../concepts/Authenticating.ts";
+import { SESSION_SECONDS } from "../concepts/Sessioning.ts";
 
 const { Matching, SongRegistering } = concepts;
 
@@ -213,9 +219,60 @@ const keys = {
 const mongo = await MongoMemoryServer.create();
 const client = await new MongoClient(mongo.getUri()).connect();
 const db = client.db("sandbox");
+const accounts = buildAccounts(client.db("sandboxAccounts"));
+
+const sessionCookie = "transpose-session";
+const cookieAttributes = "Path=/; HttpOnly; SameSite=Strict";
+const noCache = { "Cache-Control": "no-store" };
+
+async function signedInUser(request: Request) {
+  const session = new Bun.CookieMap(request.headers.get("Cookie") ?? "").get(sessionCookie);
+  const [active] = session ? await accounts.concepts.Sessioning._active({ session }) : [];
+  return active?.subject;
+}
+
+async function endSession(request: Request) {
+  const session = new Bun.CookieMap(request.headers.get("Cookie") ?? "").get(sessionCookie);
+  if (session) await accounts.concepts.Sessioning.end({ session });
+}
+
+function sameOrigin(request: Request) {
+  const origin = request.headers.get("Origin");
+  return !origin || origin === new URL(request.url).origin;
+}
+
+function signInRequired() {
+  return Response.json({ error: "Sign in to use Transpose." }, { status: 401, headers: noCache });
+}
+
+async function accountRequest(request: Request, path: string) {
+  if (!sameOrigin(request)) return new Response(null, { status: 403 });
+  if (path === "/auth/sign-out") {
+    await endSession(request);
+    return Response.json({}, { headers: { ...noCache, "Set-Cookie": `${sessionCookie}=; ${cookieAttributes}; Max-Age=0` } });
+  }
+  const input = await request.json().catch(() => null);
+  const username = typeof input?.username === "string" ? normalizeUsername(input.username) : "";
+  const password = input?.password;
+  if (!validUsername(username) || typeof password !== "string" || password.length < 8 || password.length > 128) {
+    return Response.json({ error: "Use a 3–32 character username and an 8–128 character password." }, { status: 400, headers: noCache });
+  }
+  const result = await accounts.invoker.invoke(path, { username, password });
+  if (!result.ok) {
+    const registered = path === "/auth/register" && (await accounts.concepts.Authenticating._registered({ username })).registered;
+    const error = registered ? "That username is already registered."
+      : path === "/auth/sign-in" ? "Incorrect username or password." : "Could not create your account.";
+    return Response.json({ error }, { status: registered ? 409 : path === "/auth/sign-in" ? 401 : 500, headers: noCache });
+  }
+  const { session } = result.value as { session: string };
+  await endSession(request);
+  return Response.json({ username }, {
+    headers: { ...noCache, "Set-Cookie": `${sessionCookie}=${session}; ${cookieAttributes}; Max-Age=${SESSION_SECONDS}` },
+  });
+}
 
 const application = buildApplicationOn(db, {
-  composition: { Sandbox: { Register, RegisterTwo, AddLink, Unregister, Find, Reject } },
+  composition: { Sandbox: { Register, RegisterTwo, AddLink, Unregister, Find, Reject, ...playlistEndpoints } },
   logSink: {
     append(entry) {
       try {
@@ -230,7 +287,15 @@ const application = buildApplicationOn(db, {
 const api = createHttpHandler({
   application,
   gateway: createGateway({ application }),
-  policy: httpPolicy({ basePath: "/api", publicErrors: { BAD_LINK: "INVALID_REQUEST" } }),
+  policy: httpPolicy({
+    basePath: "/api",
+    publicErrors: {
+      BAD_LINK: "INVALID_REQUEST",
+      SHARING_DENIED: "INVALID_REQUEST",
+      PLAYLIST_EXISTS: "INVALID_REQUEST",
+      SONG_IN_PLAYLIST: "INVALID_REQUEST",
+    },
+  }),
   // the page sends an id with each request and finds that request in the activity log by it,
   // since an error response only says INVALID_REQUEST or INTERNAL_ERROR
   correlation: {
@@ -251,17 +316,72 @@ async function state() {
   return { songs, matches, pauses, flows: [...flows.values()].reverse(), calls, youtubeSearches, keys };
 }
 
+async function playlistState(user: string) {
+  const sharing = application.concepts.PlaylistSharing;
+  const [visible, invites] = await Promise.all([
+    sharing._getSharedPlaylists({ user }),
+    sharing._getInvites({ invitee: user }),
+  ]);
+  const collection = db.collection<Playlist>("playlisting.playlists");
+  const playlists = await collection
+    .find({ $or: [{ owner: user }, { _id: { $in: visible.map(({ playlist }) => playlist) } }] }).toArray();
+  const invitedPlaylists = await collection.find({ _id: { $in: invites.map(({ playlist }) => playlist) } })
+    .project<Pick<Playlist, "_id" | "title">>({ title: 1 }).toArray();
+  return {
+    invites: invites.map((invite) => ({
+      ...invite, title: invitedPlaylists.find(({ _id }) => _id === invite.playlist)?.title ?? "Playlist",
+    })),
+    playlists: await Promise.all(playlists.map(async ({ _id, title, owner, songs }) => {
+      const [view, add, remove, members] = await Promise.all([
+        sharing._canView({ playlist: _id, user }),
+        sharing._canAdd({ playlist: _id, user }),
+        sharing._canRemove({ playlist: _id, user }),
+        sharing._getMembers({ playlist: _id }),
+      ]);
+      return view.allowed || owner === user ? {
+        id: _id, title, owner, songs, sharing: view.allowed,
+        canAdd: add.allowed, canRemove: remove.allowed,
+        members: owner === user ? members : [],
+      } : null;
+    })).then((rows) => rows.filter((row) => row !== null)),
+  };
+}
+
+function validPlaylistInput(body: unknown) {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) return false;
+  const entries = Object.entries(body);
+  return entries.every(([key, value]) => {
+    if (key === "canAdd" || key === "canRemove") return typeof value === "boolean";
+    return typeof value === "string" && value.length <= 200 && value.trim().length > 0;
+  });
+}
+
 const server = Bun.serve({
   hostname: "127.0.0.1",
   port: Number(process.env["SANDBOX_PORT"] ?? 3001),
   routes: {
     "/": () => new Response(Bun.file(`${import.meta.dir}/index.html`)),
     "/sandbox/state": {
-      GET: async () => Response.json(await state(), { headers: { "Cache-Control": "no-store" } }),
+      GET: async (request) => {
+        const user = await signedInUser(request);
+        return user ? Response.json({ user, ...await state() }, { headers: noCache }) : signInRequired();
+      },
+    },
+    "/sandbox/playlists": {
+      GET: async (request) => {
+        const user = await signedInUser(request);
+        if (!user) return signInRequired();
+        return Response.json({ user, ...await playlistState(user) }, { headers: noCache });
+      },
     },
     "/sandbox/reset": {
-      POST: async () => {
-        await db.dropDatabase();
+      POST: async (request) => {
+        if (!sameOrigin(request)) return new Response(null, { status: 403 });
+        if (!await signedInUser(request)) return signInRequired();
+        await Promise.all(
+          ["songRegistering.songs", "matching.matches", "matching.pauses"]
+            .map((collection) => db.collection(collection).deleteMany({})),
+        );
         flows.clear();
         steps.clear();
         calls.length = 0;
@@ -270,8 +390,41 @@ const server = Bun.serve({
     },
   },
   async fetch(request) {
-    if (!new URL(request.url).pathname.startsWith("/api/")) {
+    const path = new URL(request.url).pathname;
+    if (request.method === "POST" && ["/auth/register", "/auth/sign-in", "/auth/sign-out"].includes(path)) {
+      return accountRequest(request, path);
+    }
+    if (!path.startsWith("/api/")) {
       return new Response("Not found", { status: 404 });
+    }
+    if (request.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST" } });
+    if (!sameOrigin(request)) return new Response(null, { status: 403 });
+    const user = await signedInUser(request);
+    if (!user) return signInRequired();
+    if (path === "/api/playlists/export") {
+      return exportPlaylist(await request.json().catch(() => null), user, {
+        async loadPlaylist(id, user) {
+          const playlist = await db.collection<Playlist>("playlisting.playlists").findOne({ _id: id });
+          if (!playlist) return null;
+          const { allowed } = await application.concepts.PlaylistSharing._canView({ playlist: id, user });
+          return allowed || playlist.owner === user ? playlist : null;
+        },
+      });
+    }
+    if (path.startsWith("/api/playlists/") || path.startsWith("/api/invites/")) {
+      const body = await request.json().catch(() => null);
+      if (!validPlaylistInput(body)) return Response.json({ error: "INVALID_REQUEST" }, { status: 400 });
+      if (path === "/api/playlists/invite") {
+        const invitee = typeof body.invitee === "string" ? normalizeUsername(body.invitee) : "";
+        if (!validUsername(invitee) || !(await accounts.concepts.Authenticating._registered({ username: invitee })).registered) {
+          return Response.json({ error: "That username has no account." }, { status: 400 });
+        }
+        body.invitee = invitee;
+      }
+      const headers = new Headers(request.headers);
+      headers.delete("Content-Length");
+      headers.set("Content-Type", "application/json");
+      request = new Request(request.url, { method: "POST", headers, body: JSON.stringify({ ...body, user }) });
     }
     const response = await api(request);
     // the page reads the songs right after this, so let the reactions add their links first

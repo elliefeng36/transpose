@@ -11,6 +11,14 @@ import {
 } from "./concepts/Playlisting.ts";
 import matchingSpec from "@design/concepts/Matching.md" with { type: "text" };
 import { MatchingConcept } from "./concepts/Matching.ts";
+import playlistSharingSpec from "@design/concepts/PlaylistSharing.md" with { type: "text" };
+import { PlaylistSharingConcept, SharingDenied } from "./concepts/PlaylistSharing.ts";
+
+const sharing = registerConcept({
+  class: PlaylistSharingConcept,
+  spec: playlistSharingSpec,
+  refusals: { SHARING_DENIED: SharingDenied },
+});
 
 const songRegistering = registerConcept({
   class: SongRegisteringConcept,
@@ -37,6 +45,7 @@ export const applicationConceptSet = conceptSet({
   SongRegistering: songRegistering,
   Playlisting: playlisting,
   Matching: matching,
+  PlaylistSharing: sharing,
 });
 
 export const { concepts } = applicationConceptSet;

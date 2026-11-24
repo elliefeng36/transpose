@@ -13,4 +13,8 @@ instantiate Playlisting with
   Song is SongRegistering.Song
   
 instantiate Matching
+
+instantiate PlaylistSharing with
+  User is User
+  Playlist is Playlisting.Playlist
 ```
