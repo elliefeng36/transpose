@@ -152,3 +152,12 @@ const links = {
 };
 console.log(links);
 
+// test if a remix get its own isrc, or share the original's
+console.log("\nisrc: original vs remix");
+const original = (
+  await searchSpotify(appToken, "mr brightside the killers")
+)[0];
+const remix = (await searchSpotify(appToken, "mr brightside remix"))[0];
+console.log(`${original.isrc}  ${original.name} — ${original.artist}`);
+console.log(`${remix.isrc}  ${remix.name} — ${remix.artist}`);
+console.log(original.isrc === remix.isrc ? "same isrc" : "different isrc");
