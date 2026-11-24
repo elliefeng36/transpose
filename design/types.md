@@ -2,4 +2,5 @@
 
 ```instances
 instantiate SongRegistering
+instantiate Matching
 ```
