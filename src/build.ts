@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import { composition as transposing } from "./compositions/Transposing.ts";
 import { MatchingConcept } from "./concepts/Matching.ts";
 import { SongRegisteringConcept } from "./concepts/SongRegistering.ts";
+import { PlaylistingConcept } from "./concepts/Playlisting.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { db } from "./db.ts";
 import { lookupSong, searchSong } from "./platform-apis.ts";
@@ -25,6 +26,8 @@ export function buildApplicationOn(
   return assemble({
     conceptSet: applicationConceptSet,
     instances: {
+      SongRegistering: new SongRegisteringConcept(db, lookupSong, matchSong),
+      Playlisting: new PlaylistingConcept(db),
       SongRegistering: new SongRegisteringConcept(database, lookupSong, noMatch),
       Matching: new MatchingConcept(database, searchSong),
     },
